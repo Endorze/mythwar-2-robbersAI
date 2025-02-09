@@ -4,13 +4,27 @@ import pyautogui
 import pytesseract
 import pygetwindow as gw
 import time
+import keyboard  # För att hantera F5-knapp
 
 # 🔹 Ange sökvägen till Tesseract om det behövs (Windows-användare)
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
 # 🔹 Lista över felstavningar som ska accepteras
 ROBBER_VARIANTS = ["robber", "rober", "r0bber", "r0ber", "robbr"]
-clicked_robber = False  # Om detta är True, flytta musen till mitten efteråt
+SEARCHING_FOR_CLICK = False  
+paused = False  # Styr om skriptet är pausat eller ej
+
+def toggle_pause():
+    """ Växlar mellan pausat och aktivt läge. """
+    global paused
+    paused = not paused
+    if paused:
+        print("⏸️ Skript pausat. Tryck F5 för att återuppta.")
+    else:
+        print("▶️ Skript återupptas.")
+
+# 🔹 Lyssna på F5-knappen för att pausa/återuppta
+keyboard.add_hotkey("f5", toggle_pause)
 
 def get_game_window():
     """ Hitta spelrutans position och storlek på skärmen. """
@@ -19,18 +33,10 @@ def get_game_window():
             return window.left, window.top, window.width, window.height
     return None
 
-def activate_game_window():
-    """ Gör spelets fönster aktivt innan vi klickar. """
-    game_window = gw.getWindowsWithTitle("[mountasi] Myth War II Online( ENGLISH version 1.0.3 - 6137 )")
-    if game_window:
-        game_window[0].activate()
-        time.sleep(0.3)  # Ge spelet en kort tid att aktiveras
-
 def capture_game_screen():
     """ Tar en skärmbild av spelrutan. """
     game_window = get_game_window()
     if not game_window:
-        print([w.title for w in gw.getAllWindows()])
         print("❌ Spelet hittades inte! Kontrollera fönsternamnet.")
         return None, None
 
@@ -60,16 +66,28 @@ def filter_text_colors(image):
 
     return result
 
+def is_within_allowed_area(click_x, click_y, game_position):
+    """ Kontrollerar om klicket är inom 40% avstånd från mitten av skärmen. """
+    game_x, game_y, game_w, game_h = game_position
+
+    # 🔹 Hitta mittpunkten av spelfönstret
+    center_x = game_x + game_w // 2
+    center_y = game_y + game_h // 2
+
+    # 🔹 Definiera gränser för 40% från mitten
+    max_x = center_x + int(game_w * 0.2)  # 20% åt höger
+    min_x = center_x - int(game_w * 0.2)  # 20% åt vänster
+    max_y = center_y + int(game_h * 0.2)  # 20% nedåt
+    min_y = center_y - int(game_h * 0.2)  # 20% uppåt
+
+    # 🔹 Kolla om klicket är inom dessa gränser
+    return min_x <= click_x <= max_x and min_y <= click_y <= max_y
+
 def detect_robber_text(image, game_position):
-    """ Använder Tesseract för att identifiera texten 'Robber', klickar på den och aktiverar efterföljande klick i mitten. """
-    global clicked_robber  
+    """ Använder Tesseract för att identifiera texten 'Robber' och klicka om den är inom mittenområdet. """
+    global SEARCHING_FOR_CLICK  
 
     processed_image = filter_text_colors(image)
-
-    # 🔹 Visa den filtrerade bilden för debug
-    cv2.imshow("Filtrerad Text", processed_image)
-    cv2.waitKey(500)
-    cv2.destroyAllWindows()
 
     # 🔹 Använd OCR för att läsa texten
     data = pytesseract.image_to_data(processed_image, config="--oem 3 --psm 6", output_type=pytesseract.Output.DICT)
@@ -79,66 +97,60 @@ def detect_robber_text(image, game_position):
         if any(variant in text for variant in ROBBER_VARIANTS):  
             x, y, w, h = data["left"][i], data["top"][i], data["width"][i], data["height"][i]
 
-            # 🔹 Klicka 20 pixlar under mitten av texten
+            # 🔹 Klicka 30 pixlar under mitten av texten
             click_x = game_position[0] + x + w // 2
-            click_y = game_position[1] + y + h + 20
+            click_y = game_position[1] + y + h + 30
 
-            # 🔹 Aktivera spelets fönster innan klick
-            activate_game_window()
+            # 🔹 Kontrollera om klicket är inom 40% från mitten
+            if is_within_allowed_area(click_x, click_y, game_position):
+                # 🔹 Flytta musen och klicka
+                pyautogui.moveTo(click_x, click_y)
+                time.sleep(0.1)
+                pyautogui.click()
 
-            # 🔹 Flytta musen och klicka
-            pyautogui.moveTo(click_x, click_y, duration=0.2)
-            pyautogui.mouseDown()
-            time.sleep(0.05)  # Håll nere klicket kort
-            pyautogui.mouseUp()
+                print(f"✅ Klickade på '{text}' vid ({click_x}, {click_y})")
 
-            print(f"✅ Klickade på '{text}' vid ({click_x}, {click_y})")
+                time.sleep(0.5)  
+                SEARCHING_FOR_CLICK = True
+                return  
+            else:
+                print(f"❌ Ignorerar '{text}' vid ({click_x}, {click_y}) - Utanför 40% från mitten.")
 
-            time.sleep(1)  # Vänta 1 sekund innan vi rör oss mot mitten av skärmen
-            clicked_robber = True  # Aktivera flaggan för nästa klick
-            return  
-
-    print("❌ OCR hittade ingen 'Robber'-text.")
+    print("❌ OCR hittade ingen 'Robber'-text inom tillåtet område.")
 
 def click_middle_screen(game_position):
-    """ Flyttar musen till mitten och 50% av höjden och klickar efter 0.5 sekunder. """
-    global clicked_robber
-
-    if not clicked_robber:
-        return  # Om vi inte klickade på en Robber, gör inget
+    """ Väntar 1 sekund och klickar 52% ner på skärmen i mitten. """
+    global SEARCHING_FOR_CLICK
 
     _, _, game_w, game_h = game_position  # Hämta spelrutans storlek
 
-    # 🔹 Beräkna mitten av bredden och 50% av höjden
+    # 🔹 Beräkna mitten av bredden och 52% av höjden
     click_x = game_position[0] + game_w // 2
-    click_y = game_position[1] + int(game_h * 0.50)
+    click_y = game_position[1] + int(game_h * 0.52)
 
-    # 🔹 Aktivera spelet innan klick
-    activate_game_window()
+    # 🔹 Flytta musen och klicka
+    pyautogui.moveTo(click_x, click_y)
+    time.sleep(0.1)
+    pyautogui.click()
 
-    # 🔹 Flytta musen till mitten och vänta 0.5 sekunder innan klick
-    pyautogui.moveTo(click_x, click_y, duration=0.2)
-    time.sleep(0.5)  # Vänta innan klick
-
-    # 🔹 Klicka
-    pyautogui.mouseDown()
-    time.sleep(0.05)  # Håll nere klicket kort
-    pyautogui.mouseUp()
-
-    print(f"✅ Klickade 50% ner på skärmen vid ({click_x}, {click_y})")
+    print(f"✅ Klickade på mitten av skärmen vid ({click_x}, {click_y})")
 
     time.sleep(0.3)  
-    clicked_robber = False  # Återställ flaggan så att vi letar efter en ny "Robber"
+    SEARCHING_FOR_CLICK = False  
 
-# 🔹 Kör loopen för att leta efter Robber, sedan klicka 50% ner om vi har tryckt på en Robber
+# 🔹 Kör loopen för att leta efter Robber, sedan klicka i mitten av skärmen
 while True:
+    if paused:
+        time.sleep(0.1)  # Vänta medan skriptet är pausat
+        continue  # Hoppa över resten av loopen
+
     screenshot, game_position = capture_game_screen()
     if screenshot is not None:
-        if clicked_robber:
-            print("🔍 Flyttar mot 50% av skärmen och klickar...")
+        if SEARCHING_FOR_CLICK:
+            print("🔍 Klickar 52% ner på skärmen i mitten...")
             click_middle_screen(game_position)
         else:
             print("🔍 Letar efter 'Robber'...")
             detect_robber_text(screenshot, game_position)
     
-    time.sleep(1)  
+    time.sleep(0.1)  

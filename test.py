@@ -68,9 +68,6 @@ def detect_robber_text(image, game_position):
     processed_image = filter_text_colors(image)
 
     # 🔹 Visa den filtrerade bilden för debug
-    cv2.imshow("Filtrerad Text", processed_image)
-    cv2.waitKey(500)
-    cv2.destroyAllWindows()
 
     # 🔹 Använd OCR för att läsa texten
     data = pytesseract.image_to_data(processed_image, config="--oem 3 --psm 6", output_type=pytesseract.Output.DICT)
@@ -86,11 +83,19 @@ def detect_robber_text(image, game_position):
 
             # 🔹 Flytta musen och klicka
             pyautogui.moveTo(click_x, click_y)
+            time.sleep(0.1)
+            pyautogui.click()
+            pyautogui.click()
+            time.sleep(0.1)
+            pyautogui.click()
+            time.sleep(0.1)
+            pyautogui.click()
+            time.sleep(0.1)
             pyautogui.click()
 
             print(f"✅ Klickade på '{text}' vid ({click_x}, {click_y})")
 
-            time.sleep(1)  # Vänta 1 sekund innan vi klickar i mitten av skärmen på 55% höjd
+            time.sleep(.5)  # Vänta 1 sekund innan vi klickar i mitten av skärmen på 55% höjd
             SEARCHING_FOR_CLICK = True
             return  
 
@@ -104,10 +109,23 @@ def click_middle_screen(game_position):
 
     # 🔹 Beräkna mitten av bredden och 55% av höjden
     click_x = game_position[0] + game_w // 2
-    click_y = game_position[1] + int(game_h * 0.50)
+    click_y = game_position[1] + int(game_h * 0.52)
 
     # 🔹 Flytta musen och klicka
     pyautogui.moveTo(click_x, click_y)
+    time.sleep(0.1)
+    pyautogui.moveTo(click_x+1, click_y)
+    time.sleep(0.1)
+    pyautogui.moveTo(click_x+2, click_y)
+    time.sleep(0.1)
+    pyautogui.click()
+    time.sleep(0.1)
+    pyautogui.click()
+    time.sleep(0.1)
+    pyautogui.click()
+    time.sleep(0.1)
+    pyautogui.click()
+    time.sleep(0.1)
     pyautogui.click()
 
     print(f"✅ Klickade på mitten av skärmen vid ({click_x}, {click_y})")
@@ -126,4 +144,4 @@ while True:
             print("🔍 Letar efter 'Robber'...")
             detect_robber_text(screenshot, game_position)
     
-    time.sleep(1)  
+    time.sleep(0.1)  
