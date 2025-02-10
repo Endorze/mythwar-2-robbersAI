@@ -63,25 +63,21 @@ def filter_text_colors(image):
 
     return result
 
-def is_within_allowed_area(click_x, click_y, game_position):
-    """ Kontrollerar om klicket är inom 10% avstånd från mitten av skärmen. """
+def is_outside_edge_restriction(click_x, click_y, game_position):
+    """ Kontrollerar om klicket är **utanför** 10% från kanterna av skärmen. """
     game_x, game_y, game_w, game_h = game_position
 
-    # 🔹 Hitta mittpunkten av spelfönstret
-    center_x = game_x + game_w // 2
-    center_y = game_y + game_h // 2
+    # 🔹 Definiera kanterna (yttersta 10%)
+    edge_x_min = game_x + int(game_w * 0.1)  # 10% in från vänster
+    edge_x_max = game_x + int(game_w * 0.9)  # 10% in från höger
+    edge_y_min = game_y + int(game_h * 0.1)  # 10% in från toppen
+    edge_y_max = game_y + int(game_h * 0.9)  # 10% in från botten
 
-    # 🔹 Definiera gränser för 10% från mitten
-    max_x = center_x + int(game_w * 0.1)  # 10% åt höger
-    min_x = center_x - int(game_w * 0.1)  # 10% åt vänster
-    max_y = center_y + int(game_h * 0.1)  # 10% nedåt
-    min_y = center_y - int(game_h * 0.1)  # 10% uppåt
-
-    # 🔹 Kolla om klicket är inom dessa gränser
-    return min_x <= click_x <= max_x and min_y <= click_y <= max_y
+    # 🔹 Klickas endast om det är utanför kanterna
+    return edge_x_min <= click_x <= edge_x_max and edge_y_min <= click_y <= edge_y_max
 
 def detect_robber_text(image, game_position):
-    """ Använder Tesseract för att identifiera texten 'Robber' och klicka om den är inom mittenområdet. """
+    """ Använder Tesseract för att identifiera texten 'Robber' och klicka om den är utanför kanterna. """
     global SEARCHING_FOR_CLICK  
 
     processed_image = filter_text_colors(image)
@@ -98,8 +94,8 @@ def detect_robber_text(image, game_position):
             click_x = game_position[0] + x + w // 2
             click_y = game_position[1] + y + h + 30
 
-            # 🔹 Kontrollera om klicket är inom 10% från mitten
-            if is_within_allowed_area(click_x, click_y, game_position):
+            # 🔹 Kontrollera om klicket är **utanför 10% från kanterna**
+            if is_outside_edge_restriction(click_x, click_y, game_position):
                 # 🔹 Flytta musen och klicka
                 pyautogui.moveTo(click_x, click_y)
                 time.sleep(0.05)
@@ -111,9 +107,9 @@ def detect_robber_text(image, game_position):
                 SEARCHING_FOR_CLICK = True
                 return  
             else:
-                print(f"❌ Ignorerar '{text}' vid ({click_x}, {click_y}) - Utanför 10% från mitten.")
+                print(f"❌ Ignorerar '{text}' vid ({click_x}, {click_y}) - För nära kanten (10%).")
 
-    print("❌ OCR hittade ingen 'Robber'-text inom tillåtet område.")
+    print("❌ OCR hittade ingen 'Robber'-text utanför kanterna.")
 
 def click_middle_screen(game_position):
     """ Väntar 0.5 sekunder och klickar 52% ner på skärmen i mitten. """
