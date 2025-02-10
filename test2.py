@@ -18,10 +18,7 @@ def toggle_pause():
     """ Växlar mellan pausat och aktivt läge. """
     global paused
     paused = not paused
-    if paused:
-        print("⏸️ Skript pausat. Tryck F5 för att återuppta.")
-    else:
-        print("▶️ Skript återupptas.")
+    print("⏸️ Skript pausat. Tryck F5 för att återuppta." if paused else "▶️ Skript återupptas.")
 
 # 🔹 Lyssna på F5-knappen för att pausa/återuppta
 keyboard.add_hotkey("f5", toggle_pause)
@@ -67,18 +64,18 @@ def filter_text_colors(image):
     return result
 
 def is_within_allowed_area(click_x, click_y, game_position):
-    """ Kontrollerar om klicket är inom 40% avstånd från mitten av skärmen. """
+    """ Kontrollerar om klicket är inom 10% avstånd från mitten av skärmen. """
     game_x, game_y, game_w, game_h = game_position
 
     # 🔹 Hitta mittpunkten av spelfönstret
     center_x = game_x + game_w // 2
     center_y = game_y + game_h // 2
 
-    # 🔹 Definiera gränser för 40% från mitten
-    max_x = center_x + int(game_w * 0.2)  # 20% åt höger
-    min_x = center_x - int(game_w * 0.2)  # 20% åt vänster
-    max_y = center_y + int(game_h * 0.2)  # 20% nedåt
-    min_y = center_y - int(game_h * 0.2)  # 20% uppåt
+    # 🔹 Definiera gränser för 10% från mitten
+    max_x = center_x + int(game_w * 0.1)  # 10% åt höger
+    min_x = center_x - int(game_w * 0.1)  # 10% åt vänster
+    max_y = center_y + int(game_h * 0.1)  # 10% nedåt
+    min_y = center_y - int(game_h * 0.1)  # 10% uppåt
 
     # 🔹 Kolla om klicket är inom dessa gränser
     return min_x <= click_x <= max_x and min_y <= click_y <= max_y
@@ -89,7 +86,7 @@ def detect_robber_text(image, game_position):
 
     processed_image = filter_text_colors(image)
 
-    # 🔹 Använd OCR för att läsa texten
+    # 🔹 Använd OCR för att läsa texten snabbare
     data = pytesseract.image_to_data(processed_image, config="--oem 3 --psm 6", output_type=pytesseract.Output.DICT)
 
     for i in range(len(data["text"])):
@@ -101,25 +98,25 @@ def detect_robber_text(image, game_position):
             click_x = game_position[0] + x + w // 2
             click_y = game_position[1] + y + h + 30
 
-            # 🔹 Kontrollera om klicket är inom 40% från mitten
+            # 🔹 Kontrollera om klicket är inom 10% från mitten
             if is_within_allowed_area(click_x, click_y, game_position):
                 # 🔹 Flytta musen och klicka
                 pyautogui.moveTo(click_x, click_y)
-                time.sleep(0.1)
+                time.sleep(0.05)
                 pyautogui.click()
 
                 print(f"✅ Klickade på '{text}' vid ({click_x}, {click_y})")
 
-                time.sleep(0.5)  
+                time.sleep(0.3)  
                 SEARCHING_FOR_CLICK = True
                 return  
             else:
-                print(f"❌ Ignorerar '{text}' vid ({click_x}, {click_y}) - Utanför 40% från mitten.")
+                print(f"❌ Ignorerar '{text}' vid ({click_x}, {click_y}) - Utanför 10% från mitten.")
 
     print("❌ OCR hittade ingen 'Robber'-text inom tillåtet område.")
 
 def click_middle_screen(game_position):
-    """ Väntar 1 sekund och klickar 52% ner på skärmen i mitten. """
+    """ Väntar 0.5 sekunder och klickar 52% ner på skärmen i mitten. """
     global SEARCHING_FOR_CLICK
 
     _, _, game_w, game_h = game_position  # Hämta spelrutans storlek
@@ -130,12 +127,12 @@ def click_middle_screen(game_position):
 
     # 🔹 Flytta musen och klicka
     pyautogui.moveTo(click_x, click_y)
-    time.sleep(0.1)
+    time.sleep(0.05)
     pyautogui.click()
 
     print(f"✅ Klickade på mitten av skärmen vid ({click_x}, {click_y})")
 
-    time.sleep(0.3)  
+    time.sleep(0.2)  
     SEARCHING_FOR_CLICK = False  
 
 # 🔹 Kör loopen för att leta efter Robber, sedan klicka i mitten av skärmen
@@ -153,4 +150,4 @@ while True:
             print("🔍 Letar efter 'Robber'...")
             detect_robber_text(screenshot, game_position)
     
-    time.sleep(0.1)  
+    time.sleep(0.05)  # 🔹 Gör sökningen snabbare genom att minska väntetiden
