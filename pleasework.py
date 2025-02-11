@@ -51,6 +51,11 @@ def smooth_move(x, y, duration=0.3):
 def force_click(x, y, game_position):
     """ Simulerar ett hårdvaruklick med Windows API inom 75% av skärmområdet. """
     x, y = enforce_click_boundaries(x, y, game_position)
+    
+    if detect_light_blue_near_center(game_position):
+        print("🔵 Ljusblå färg nära mitten! Justerar klickposition...")
+        x, y = move_opposite_direction(x, y, game_position)
+
     smooth_move(x, y)  
     time.sleep(0.05)  
     win32api.SetCursorPos((x, y))
@@ -72,19 +77,36 @@ def enforce_click_boundaries(x, y, game_position):
 
     return x, y
 
-def filter_text_colors(image):
-    """ Behåller endast gul text, gör allt annat svart. """
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+def detect_light_blue_near_center(game_position):
+    """ Kontrollerar om ljusblå färg finns nära mitten av skärmen. """
+    screenshot, _ = capture_game_screen()
+    if screenshot is None:
+        return False
 
-    lower_yellow = np.array([22, 150, 150])
-    upper_yellow = np.array([35, 255, 255])
+    hsv = cv2.cvtColor(screenshot, cv2.COLOR_BGR2HSV)
 
-    mask_yellow = cv2.inRange(hsv, lower_yellow, upper_yellow)
-    result = cv2.bitwise_and(image, image, mask=mask_yellow)
-    result = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
-    result = cv2.bitwise_not(result)
+    lower_light_blue = np.array([90, 150, 150])
+    upper_light_blue = np.array([110, 255, 255])
 
-    return result
+    mask_light_blue = cv2.inRange(hsv, lower_light_blue, upper_light_blue)
+
+    center_x = game_position[0] + game_position[2] // 2
+    center_y = game_position[1] + game_position[3] // 2
+
+    region_size = 30  
+    region = mask_light_blue[center_y - region_size:center_y + region_size, center_x - region_size:center_x + region_size]
+
+    return np.any(region)  
+
+def move_opposite_direction(x, y, game_position):
+    """ Flyttar klicket bort från ljusblått genom att spegla positionen från skärmens mittpunkt. """
+    center_x = game_position[0] + game_position[2] // 2
+    center_y = game_position[1] + game_position[3] // 2
+
+    new_x = center_x - (x - center_x)
+    new_y = center_y - (y - center_y)
+
+    return enforce_click_boundaries(new_x, new_y, game_position)
 
 def detect_robber_text(image, game_position):
     """ Identifiera 'Robber' och klicka endast om ingen NPC-text är i närheten. """
@@ -129,13 +151,6 @@ def click_middle_screen(game_position):
     print(f"✅ Klickade på mitten av skärmen vid ({click_x}, {click_y})")
     force_click(click_x, click_y, game_position)
 
-def close_dialog():
-    """ Om spelet låser sig i en NPC-dialog, försök att stänga den. """
-    print("🔄 Försöker stänga eventuell dialogruta...")
-    pyautogui.press("esc")  # Försöker stänga dialogrutan
-    time.sleep(0.2)
-    pyautogui.press("esc")
-
 while True:
     if paused:
         print("⏸️  Pausat - Väntar på F5 för att återuppta...")
@@ -145,7 +160,5 @@ while True:
     screenshot, game_position = capture_game_screen()
     if screenshot is not None:
         detect_robber_text(screenshot, game_position)
-
-    close_dialog()  # 🔹 Om spelet låser sig i en NPC-dialog, försök att stänga den.
 
     time.sleep(0.05)
