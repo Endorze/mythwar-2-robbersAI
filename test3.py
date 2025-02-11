@@ -25,7 +25,7 @@ keyboard.add_hotkey("f5", toggle_pause)
 
 def get_game_window():
     """ Hitta spelrutans position och storlek på skärmen. """
-    for window in gw.getWindowsWithTitle("[mountasi] Myth War II Online( ENGLISH version 1.0.3 - 6137 )"):  
+    for window in gw.getWindowsWithTitle("[mountasi3] Myth War II Online( ENGLISH version 1.0.3 - 6137 )"):  
         if window.isActive:
             return window.left, window.top, window.width, window.height
     return None
@@ -47,14 +47,30 @@ def smooth_move(x, y, duration=0.3):
     """ Flyttar musen mjukt till positionen istället för att teleportera. """
     pyautogui.moveTo(x, y, duration=duration)
 
-def force_click(x, y):
-    """ Simulerar ett hårdvaruklick med Windows API. """
+def force_click(x, y, game_position):
+    """ Simulerar ett hårdvaruklick med Windows API inom 75% av skärmområdet. """
+    x, y = enforce_click_boundaries(x, y, game_position)
     smooth_move(x, y)  # Mjuk musrörelse först
     time.sleep(0.05)  # Kort paus
     win32api.SetCursorPos((x, y))
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
     time.sleep(0.1)  # Håller ner musen en kort stund
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
+
+def enforce_click_boundaries(x, y, game_position):
+    """ Justerar klicket så att det alltid är inom 75% av skärmen (15% marginal på kanterna). """
+    game_x, game_y, game_w, game_h = game_position
+
+    min_x = game_x + int(game_w * 0.15)
+    max_x = game_x + int(game_w * 0.85)
+    min_y = game_y + int(game_h * 0.15)
+    max_y = game_y + int(game_h * 0.85)
+
+    # Begränsa x och y så att de alltid är inom 75% av skärmen
+    x = max(min_x, min(x, max_x))
+    y = max(min_y, min(y, max_y))
+
+    return x, y
 
 def filter_text_colors(image):
     """ Behåller endast gul text, gör allt annat svart. """
@@ -87,7 +103,7 @@ def detect_robber_text(image, game_position):
             click_y = game_position[1] + y + h + 30
 
             print(f"✅ Klickade på '{text}' vid ({click_x}, {click_y})")
-            force_click(click_x, click_y)
+            force_click(click_x, click_y, game_position)
 
             robber_found = True
             break  
@@ -106,7 +122,7 @@ def click_middle_screen(game_position):
     click_y = game_position[1] + int(game_h * 0.52)
 
     print(f"✅ Klickade på mitten av skärmen vid ({click_x}, {click_y})")
-    force_click(click_x, click_y)
+    force_click(click_x, click_y, game_position)
 
 # 🔹 Loop för att kontinuerligt söka och klicka
 while True:
