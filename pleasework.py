@@ -70,8 +70,10 @@ def force_click(x, y, game_position):
     x, y = enforce_click_boundaries(x, y, game_position)
     
     if detect_light_blue_near_center(game_position):
-        print("🔵 Ljusblå färg nära mitten! Justerar klickposition...")
-        x, y = adjust_click_away_from_blue(x, y, game_position)
+        print("🔵 Ljusblå färg nära mitten! Kontrollerar om det är ett problem...")
+        if is_large_blue_area(game_position):
+            print("🚨 Stor blå yta upptäckt! Justerar klick.")
+            x, y = adjust_click_away_from_blue(x, y, game_position)
 
     smooth_move(x, y)  
     time.sleep(0.05)  
@@ -109,13 +111,20 @@ def detect_light_blue_near_center(game_position):
 
     mask_light_blue = cv2.inRange(hsv, lower_light_blue, upper_light_blue)
 
-    center_x = game_position[0] + game_position[2] // 2
-    center_y = game_position[1] + game_position[3] // 2
+    return np.any(mask_light_blue)
 
-    region_size = 40  
-    region = mask_light_blue[center_y - region_size:center_y + region_size, center_x - region_size:center_x + region_size]
+def is_large_blue_area(game_position):
+    """ Kollar om det blå området är stort och blockar skärmen. """
+    screenshot, _ = capture_game_screen()
+    if screenshot is None:
+        return False
 
-    return np.any(region)  
+    hsv = cv2.cvtColor(screenshot, cv2.COLOR_BGR2HSV)
+    lower_light_blue = np.array([90, 150, 150])
+    upper_light_blue = np.array([110, 255, 255])
+    mask_light_blue = cv2.inRange(hsv, lower_light_blue, upper_light_blue)
+
+    return np.count_nonzero(mask_light_blue) > 2000  
 
 def adjust_click_away_from_blue(x, y, game_position):
     """ Om ljusblått är framför, klicka åt sidan istället för motsatt håll. """
@@ -137,37 +146,6 @@ def adjust_click_away_from_blue(x, y, game_position):
 
     return enforce_click_boundaries(new_x, new_y, game_position)
 
-def detect_robber_text(image, game_position):
-    """ Identifiera 'Robber' och klicka endast om ingen NPC-text är i närheten. """
-    processed_image = filter_text_colors(image)
-    data = pytesseract.image_to_data(processed_image, config="--oem 3 --psm 6", output_type=pytesseract.Output.DICT)
-
-    robber_found = False
-    nearby_npc = False  
-
-    for i in range(len(data["text"])):
-        text = data["text"][i].lower().strip()
-        x, y, w, h = data["left"][i], data["top"][i], data["width"][i], data["height"][i]
-
-        if any(npc in text for npc in BLOCKED_NPCS):
-            print(f"🚫 Blockerar klick - '{text}' nära Robber vid ({x}, {y})")
-            nearby_npc = True  
-
-        if any(variant in text for variant in ROBBER_VARIANTS):  
-            click_x = game_position[0] + x + w // 2
-            click_y = game_position[1] + y + h + 30
-
-            if not nearby_npc:  
-                print(f"✅ Klickar på '{text}' vid ({click_x}, {click_y})")
-                force_click(click_x, click_y, game_position)
-                robber_found = True
-                break  
-            else:
-                print(f"⚠️ Skippade '{text}' eftersom en NPC-text var nära.")
-
-    if not robber_found:
-        print("❌ OCR hittade ingen 'Robber'-text eller klick avbröts.")
-
 while True:
     if paused:
         print("⏸️  Pausat - Väntar på F5 för att återuppta...")
@@ -176,6 +154,6 @@ while True:
 
     screenshot, game_position = capture_game_screen()
     if screenshot is not None:
-        detect_robber_text(screenshot, game_position)
+        force_click(game_position[0] + game_position[2] // 2, game_position[1] + int(game_position[3] * 0.52), game_position)
 
     time.sleep(0.05)
