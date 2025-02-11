@@ -15,6 +15,7 @@ ROBBER_VARIANTS = ["robber", "rober", "r0bber", "r0ber", "robbr"]
 BLOCKED_NPCS = ["elven witch", "cupid"]  # 🔹 NPC:er som ska ignoreras
 
 paused = False  
+previous_position = None  # Håller koll på senaste klickets position
 
 def toggle_pause():
     """ Växlar mellan pausat och aktivt läge. """
@@ -44,17 +45,33 @@ def capture_game_screen():
     screenshot = cv2.cvtColor(screenshot, cv2.COLOR_RGB2BGR)
     return screenshot, (x, y, w, h)
 
+def filter_text_colors(image):
+    """ Behåller endast gul text, gör allt annat svart. """
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+    lower_yellow = np.array([22, 150, 150])
+    upper_yellow = np.array([35, 255, 255])
+
+    mask_yellow = cv2.inRange(hsv, lower_yellow, upper_yellow)
+    result = cv2.bitwise_and(image, image, mask=mask_yellow)
+    result = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
+    result = cv2.bitwise_not(result)
+
+    return result
+
 def smooth_move(x, y, duration=0.3):
     """ Flyttar musen mjukt till positionen istället för att teleportera. """
     pyautogui.moveTo(x, y, duration=duration)
 
 def force_click(x, y, game_position):
     """ Simulerar ett hårdvaruklick med Windows API inom 75% av skärmområdet. """
+    global previous_position
+
     x, y = enforce_click_boundaries(x, y, game_position)
     
     if detect_light_blue_near_center(game_position):
         print("🔵 Ljusblå färg nära mitten! Justerar klickposition...")
-        x, y = move_opposite_direction(x, y, game_position)
+        x, y = adjust_click_away_from_blue(x, y, game_position)
 
     smooth_move(x, y)  
     time.sleep(0.05)  
@@ -62,6 +79,8 @@ def force_click(x, y, game_position):
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
     time.sleep(0.1)  
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
+
+    previous_position = (x, y)  # Uppdatera senaste klicket
 
 def enforce_click_boundaries(x, y, game_position):
     """ Justerar klicket så att det alltid är inom 75% av skärmen (15% marginal på kanterna). """
@@ -93,18 +112,28 @@ def detect_light_blue_near_center(game_position):
     center_x = game_position[0] + game_position[2] // 2
     center_y = game_position[1] + game_position[3] // 2
 
-    region_size = 30  
+    region_size = 40  
     region = mask_light_blue[center_y - region_size:center_y + region_size, center_x - region_size:center_x + region_size]
 
     return np.any(region)  
 
-def move_opposite_direction(x, y, game_position):
-    """ Flyttar klicket bort från ljusblått genom att spegla positionen från skärmens mittpunkt. """
-    center_x = game_position[0] + game_position[2] // 2
-    center_y = game_position[1] + game_position[3] // 2
+def adjust_click_away_from_blue(x, y, game_position):
+    """ Om ljusblått är framför, klicka åt sidan istället för motsatt håll. """
+    global previous_position
+    if not previous_position:
+        return enforce_click_boundaries(x + 50, y, game_position)  # Standard justering
 
-    new_x = center_x - (x - center_x)
-    new_y = center_y - (y - center_y)
+    prev_x, prev_y = previous_position
+
+    dx = x - prev_x
+    dy = y - prev_y
+
+    if abs(dx) > abs(dy):  
+        new_x = x + (-50 if dx > 0 else 50)  
+        new_y = y
+    else:  
+        new_x = x
+        new_y = y + (-50 if dy > 0 else 50)  
 
     return enforce_click_boundaries(new_x, new_y, game_position)
 
@@ -138,18 +167,6 @@ def detect_robber_text(image, game_position):
 
     if not robber_found:
         print("❌ OCR hittade ingen 'Robber'-text eller klick avbröts.")
-
-    click_middle_screen(game_position)
-
-def click_middle_screen(game_position):
-    """ Klickar 55% ner på skärmen i mitten, alltid efter att ha letat efter en Robber. """
-    _, _, game_w, game_h = game_position
-
-    click_x = game_position[0] + game_w // 2
-    click_y = game_position[1] + int(game_h * 0.52)
-
-    print(f"✅ Klickade på mitten av skärmen vid ({click_x}, {click_y})")
-    force_click(click_x, click_y, game_position)
 
 while True:
     if paused:
