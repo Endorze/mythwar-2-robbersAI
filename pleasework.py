@@ -12,7 +12,7 @@ pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tessera
 
 # 🔹 Lista över felstavningar som ska accepteras
 ROBBER_VARIANTS = ["robber", "rober", "r0bber", "r0ber", "robbr"]
-BLOCKED_NPCS = ["elven witch", "cupid", "shopkeeper", "wizard"]  # 🔹 NPC:er som ska ignoreras
+BLOCKED_NPCS = ["elven witch", "cupid"]  # 🔹 NPC:er som ska ignoreras
 
 paused = False  
 
