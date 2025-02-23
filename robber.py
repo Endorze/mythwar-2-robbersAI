@@ -12,6 +12,8 @@ pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tessera
 
 # 🔹 Lista över felstavningar som ska accepteras
 ROBBER_VARIANTS = ["robber", "rober", "r0bber", "r0ber", "robbr"]
+BLOCKED_NPCS = ["elven witch", "cupid"]  # 🔹 NPC:er som ska ignoreras
+
 paused = False  
 
 def toggle_pause():
@@ -46,12 +48,12 @@ def smooth_move(x, y, duration=0.3):
     """ Flyttar musen mjukt till positionen istället för att teleportera. """
     pyautogui.moveTo(x, y, duration=duration)
 
-def force_click(x, y, game_position):
+def force_click(x, y, game_position, previous_position):
     """ Simulerar ett hårdvaruklick med Windows API inom 75% av skärmområdet. """
     x, y = enforce_click_boundaries(x, y, game_position)
     
     if detect_light_blue_near_center(game_position):
-        x, y = move_opposite_direction(x, y, game_position)
+        x, y = move_opposite_direction(x, y, previous_position)
 
     smooth_move(x, y)  
     time.sleep(0.05)  
@@ -81,7 +83,7 @@ def filter_text_colors(image):
     lower_yellow = np.array([22, 150, 150])
     upper_yellow = np.array([35, 255, 255])
 
-    lower_light_blue = np.array([90, 150, 150])  # Justerat för ljusblått
+    lower_light_blue = np.array([90, 150, 150])  
     upper_light_blue = np.array([110, 255, 255])
 
     mask_yellow = cv2.inRange(hsv, lower_yellow, upper_yellow)
@@ -111,23 +113,23 @@ def detect_light_blue_near_center(game_position):
     center_x = game_position[0] + game_position[2] // 2
     center_y = game_position[1] + game_position[3] // 2
 
-    region_size = 20  # Storlek på området att kontrollera runt mitten
+    region_size = 20  
     region = mask_light_blue[center_y - region_size:center_y + region_size, center_x - region_size:center_x + region_size]
 
-    return np.any(region)  # Returnerar True om någon ljusblå pixel hittas
+    return np.any(region)  
 
-def move_opposite_direction(x, y, game_position):
-    """ Flyttar klickpositionen i motsatt riktning från mitten. """
-    center_x = game_position[0] + game_position[2] // 2
-    center_y = game_position[1] + game_position[3] // 2
-
-    new_x = center_x - (x - center_x)
-    new_y = center_y - (y - center_y)
-
+def move_opposite_direction(x, y, previous_position):
+    """ Flyttar klickpositionen i motsatt riktning från den tidigare positionen. """
+    new_x = previous_position[0]
+    new_y = previous_position[1]
     return new_x, new_y
+
+previous_position = None  
 
 def detect_robber_text(image, game_position):
     """ Identifiera 'Robber' och klicka på den om den fortfarande finns kvar. """
+    global previous_position
+
     processed_image = filter_text_colors(image)
     data = pytesseract.image_to_data(processed_image, config="--oem 3 --psm 6", output_type=pytesseract.Output.DICT)
 
@@ -135,20 +137,21 @@ def detect_robber_text(image, game_position):
 
     for i in range(len(data["text"])):
         text = data["text"][i].lower().strip()
+
+        if text in BLOCKED_NPCS:
+            print(f"🚫 Ignorerar '{text}' för att den är på blocklistan.")
+            continue  
+
         if any(variant in text for variant in ROBBER_VARIANTS):  
             x, y, w, h = data["left"][i], data["top"][i], data["width"][i], data["height"][i]
 
             click_x = game_position[0] + x + w // 2
             click_y = game_position[1] + y + h + 30
 
-            print(f"🔍 Verifierar 'Robber' vid ({click_x}, {click_y})...")
-
-            if detect_light_blue_near_center(game_position):
-                click_x, click_y = move_opposite_direction(click_x, click_y, game_position)
-
             print(f"✅ Klickar på '{text}' vid ({click_x}, {click_y})")
-            force_click(click_x, click_y, game_position)
+            force_click(click_x, click_y, game_position, previous_position)
 
+            previous_position = (click_x, click_y)  
             robber_found = True
             break  
 
@@ -165,7 +168,80 @@ def click_middle_screen(game_position):
     click_y = game_position[1] + int(game_h * 0.52)
 
     print(f"✅ Klickade på mitten av skärmen vid ({click_x}, {click_y})")
-    force_click(click_x, click_y, game_position)
+    force_click(click_x, click_y, game_position, previous_position)
+
+# ─── NEW HELPER FUNCTIONS FOR EXTENDED FUNCTIONALITY ─────────────────────────
+
+def boxes_overlap(box1, box2):
+    """Kontrollerar om två rektanglar (x1, y1, x2, y2) överlappar. """
+    return not (box1[2] < box2[0] or box2[2] < box1[0] or box1[3] < box2[1] or box2[3] < box1[1])
+
+def is_exclusive_robber(data, candidate_index):
+    """
+    Kontrollerar om den OCR-detekterade texten som matchar 'robber' är isolerad, 
+    dvs. att inga andra texter överlappar dess bounding box.
+    """
+    candidate_box = (
+        data["left"][candidate_index],
+        data["top"][candidate_index],
+        data["left"][candidate_index] + data["width"][candidate_index],
+        data["top"][candidate_index] + data["height"][candidate_index]
+    )
+    for i in range(len(data["text"])):
+        if i == candidate_index:
+            continue
+        other_text = data["text"][i].lower().strip()
+        if other_text == "":
+            continue
+        # Om annan text inte är ett 'robber'-variant så kontrolleras överlappning
+        if not any(variant in other_text for variant in ROBBER_VARIANTS):
+            other_box = (
+                data["left"][i],
+                data["top"][i],
+                data["left"][i] + data["width"][i],
+                data["top"][i] + data["height"][i]
+            )
+            if boxes_overlap(candidate_box, other_box):
+                return False
+    return True
+
+def detect_robber_text_extended(image, game_position):
+    """
+    Utökad funktion som säkerställer att vi endast klickar om det är en ensam 'Robber'-text,
+    dvs. att inga andra OCR-texter överlappar med den.
+    """
+    global previous_position
+    processed_image = filter_text_colors(image)
+    data = pytesseract.image_to_data(processed_image, config="--oem 3 --psm 6", output_type=pytesseract.Output.DICT)
+    robber_found = False
+
+    for i in range(len(data["text"])):
+        text = data["text"][i].lower().strip()
+        if text in BLOCKED_NPCS:
+            print(f"🚫 Ignorerar '{text}' för att den är på blocklistan.")
+            continue
+        if any(variant in text for variant in ROBBER_VARIANTS):
+            # Endast klicka om OCR-kandidaten är exklusiv (ingen annan text överlappar)
+            if not is_exclusive_robber(data, i):
+                print("❌ Flera texter hittades runt 'robber'-kandidaten, avbryter klick.")
+                continue
+            x, y, w, h = data["left"][i], data["top"][i], data["width"][i], data["height"][i]
+            click_x = game_position[0] + x + w // 2
+            click_y = game_position[1] + y + h + 30
+            print(f"✅ Klickar på '{text}' vid ({click_x}, {click_y})")
+            force_click(click_x, click_y, game_position, previous_position)
+            previous_position = (click_x, click_y)
+            robber_found = True
+            break
+
+    if not robber_found:
+        print("❌ OCR hittade ingen exklusiv 'Robber'-text eller den försvann.")
+
+    click_middle_screen(game_position)
+
+# ─── OVERRIDE ORIGINAL FUNCTION WITH EXTENDED VERSION ───────────────────────
+
+detect_robber_text = detect_robber_text_extended
 
 while True:
     if paused:
@@ -175,7 +251,6 @@ while True:
 
     screenshot, game_position = capture_game_screen()
     if screenshot is not None:
-        print("🔍 Letar efter 'Robber'...")
         detect_robber_text(screenshot, game_position)
 
     time.sleep(0.05)
