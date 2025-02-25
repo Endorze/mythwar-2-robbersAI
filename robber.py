@@ -83,8 +83,9 @@ def filter_text_colors(image):
     lower_yellow = np.array([22, 150, 150])
     upper_yellow = np.array([35, 255, 255])
 
-    lower_light_blue = np.array([90, 150, 150])  
-    upper_light_blue = np.array([110, 255, 255])
+    lower_light_blue = np.array([75, 0, 230])  
+    upper_light_blue = np.array([100, 50, 255])
+
 
     mask_yellow = cv2.inRange(hsv, lower_yellow, upper_yellow)
     mask_light_blue = cv2.inRange(hsv, lower_light_blue, upper_light_blue)
