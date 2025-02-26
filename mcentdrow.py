@@ -35,7 +35,7 @@ def get_game_window():
     return None
 
 def smooth_click(x, y):
-    pyautogui.moveTo(x, y, duration=0.3)
+    pyautogui.moveTo(x, y, duration=0.4)
     time.sleep(0.1)
     pyautogui.click()
 
@@ -73,7 +73,7 @@ def detect_drowcrusher_text(image, game_position):
 
 def force_hover_and_click(x, y):
     """ Flyttar bort musen, hovrar igen och gör ett kraftigt klick """
-    pyautogui.moveTo(x + 50, y + 50, duration=0.3)  # Flytta bort musen
+    pyautogui.moveTo(x + 0, y + 25, duration=0.3)  # Flytta bort musen
     time.sleep(0.2)
     pyautogui.moveTo(x, y, duration=0.3)  # Hovra tillbaka
     time.sleep(0.2)
@@ -245,3 +245,9 @@ if __name__ == "__main__":
             press_physical_pause_key()
 
             iteration_count = 0  # Återställ räknaren efter 23 lyckade iterationer
+            time.sleep(1)
+            bag_visible = find_and_click_item("laptopbag.png", force_hover=True)
+            if not bag_visible:
+            print("⚠️ Bag är inte synlig efter 23 iterationer. Väntar...")
+            time.sleep(5)  # 🔹 NYTT: Ge spelet extra tid om bag inte syns
+            continue  # 🔄 Hoppa över iterationen och börja om från början
