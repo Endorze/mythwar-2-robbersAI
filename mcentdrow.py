@@ -169,27 +169,29 @@ if __name__ == "__main__":
     while True:  # Oändlig loop
         print(f"🔄 Iteration: {iteration_count + 1}")
 
-        # Steg 1: Klicka på bag
-        if not find_and_click_item("laptopbag.png"):
+        # ✅ **Steg 1: Klicka på bag**
+        bag_clicked = find_and_click_item("laptopbag.png")
+        if not bag_clicked:
             print("⚠️ Bag hittades inte, hoppar över iterationen.")
-            continue  # Börja om från början av loopen
+            continue  # 🔄 Hoppa över resten av iterationen och börja om från början
 
         time.sleep(0.5)
-        screenshot, game_position = capture_game_screen()
 
-        # Steg 2: Leta efter Drowcrusher
+        # ✅ **Steg 2: Ta en skärmdump och leta efter Drowcrusher**
+        screenshot, game_position = capture_game_screen()
         if screenshot is None or not detect_drowcrusher_text(screenshot, game_position):
             print("⚠️ Drowcrusher hittades inte, hoppar över iterationen.")
-            continue  # Börja om från början av loopen
+            continue  # 🔄 Hoppa över resten av iterationen och börja om från början
 
-        # Fortsätt bara om Drowcrusher har hittats
+        # ✅ **Om vi kommit hit: Bag är öppen och Drowcrusher hittades**
         pyautogui.moveTo(game_position[0] + int(game_position[2] * 0.8), game_position[1] + int(game_position[3] * 0.2))
         time.sleep(1)
 
-        # Steg 3: Klicka på item i inventory
-        if not find_and_click_item("cent.png"):
+        # ✅ **Steg 3: Klicka på item i inventory**
+        item_clicked = find_and_click_item("cent.png")
+        if not item_clicked:
             print("⚠️ Item hittades inte, hoppar över iterationen.")
-            continue  # Börja om från början av loopen
+            continue  # 🔄 Hoppa över resten av iterationen och börja om från början
 
         time.sleep(1)
         click_at_percentage(0.75, 0.765)  # Steg 4: Klicka 70% från vänster, 70% ned
@@ -198,10 +200,10 @@ if __name__ == "__main__":
         time.sleep(8)
         click_at_percentage(0.5, 0.5)
 
-        # ✅ **Nu ökar iteration_count bara om alla steg lyckades!**
+        # ✅ **Nu ökar iteration_count bara om ALLA steg lyckades!**
         iteration_count += 1
 
-        # **Efter 23 lyckade iterationer, kör extrasteg**
+        # ✅ **Efter 23 lyckade iterationer, kör extrasteg**
         if iteration_count % 23 == 0:
             print("🎉 23 lyckade iterationer! Kör extrastegen.")
 
