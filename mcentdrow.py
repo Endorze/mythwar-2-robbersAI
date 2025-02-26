@@ -29,7 +29,7 @@ def terminate_script():
 keyboard.add_hotkey("f5", terminate_script)
 
 def get_game_window():
-    for window in gw.getWindowsWithTitle("[mountasi2] Myth War II Online( ENGLISH version 1.0.3 - 6137 )"):
+    for window in gw.getWindowsWithTitle("[mountasi1] Myth War II Online( ENGLISH version 1.0.3 - 6137 )"):
         if window.isActive:
             return window.left, window.top, window.width, window.height
     return None
