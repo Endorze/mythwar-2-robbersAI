@@ -86,23 +86,27 @@ def find_and_click_item(item_image_path):
     toggle_pause()
     return False
 
-def find_and_click_offset_item(item_image_path):
+def find_and_click_offset_item(item_image_path, retries=3):
     if paused:
         return False
-    screenshot = pyautogui.screenshot()
-    screenshot.save("offset_screenshot.png")
-    inventory_img = cv2.imread("offset_screenshot.png", cv2.IMREAD_UNCHANGED)
-    template = cv2.imread(item_image_path, cv2.IMREAD_UNCHANGED)
-    result = cv2.matchTemplate(inventory_img, template, cv2.TM_CCOEFF_NORMED)
-    _, max_val, _, max_loc = cv2.minMaxLoc(result)
-    if max_val > 0.8:
-        x, y = max_loc
-        x_offset = x + template.shape[1] + 30
-        y_offset = y + template.shape[0] // 2
-        smooth_click(x_offset, y_offset)
-        return True
-    print("❌ Offset item hittades inte.")
+    for attempt in range(retries):
+        screenshot = pyautogui.screenshot()
+        screenshot.save("offset_screenshot.png")
+        inventory_img = cv2.imread("offset_screenshot.png", cv2.IMREAD_UNCHANGED)
+        template = cv2.imread(item_image_path, cv2.IMREAD_UNCHANGED)
+        result = cv2.matchTemplate(inventory_img, template, cv2.TM_CCOEFF_NORMED)
+        _, max_val, _, max_loc = cv2.minMaxLoc(result)
+        if max_val > 0.8:
+            x, y = max_loc
+            x_offset = x + template.shape[1] + 30
+            y_offset = y + template.shape[0] // 2
+            smooth_click(x_offset, y_offset)
+            return True
+        print(f"❌ Försök {attempt + 1}: Offset item hittades inte, försöker igen...")
+        time.sleep(0.5)
+    print("❌ Offset item hittades inte efter flera försök.")
     return False
+
 
 def click_at_percentage(x_percent, y_percent):
     game_window = get_game_window()
@@ -120,6 +124,7 @@ def press_physical_pause_key():
     win32api.keybd_event(win32con.VK_PAUSE, 0, win32con.KEYEVENTF_KEYUP, 0)
 
 def type_23():
+    time.sleep(2)
     keyboard.press('backspace')
     time.sleep(2)
     keyboard.write("23")
@@ -145,8 +150,8 @@ if __name__ == "__main__":
             press_physical_pause_key()
             time.sleep(1)
             find_and_click_item("image.png")  # Steg 3: Klicka på item i inventory
-            time.sleep(1)
-            find_and_click_offset_item("quantity.png")
+            time.sleep(2)
+            find_and_click_offset_item("quantity.png", retries=10)
             time.sleep(2)
             type_23()
             time.sleep(2)
