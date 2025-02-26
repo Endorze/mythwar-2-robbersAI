@@ -38,8 +38,6 @@ def smooth_click(x, y):
     pyautogui.moveTo(x, y, duration=0.3)
     time.sleep(0.1)
     pyautogui.click()
-    pyautogui.click()
-
 
 def capture_game_screen():
     game_window = get_game_window()
@@ -73,20 +71,44 @@ def detect_drowcrusher_text(image, game_position):
     print("❌ OCR hittade ingen 'Drowcrusher'-text eller den försvann.")
     return False
 
-def find_and_click_item(item_image_path):
+def force_hover_and_click(x, y):
+    """ Flyttar bort musen, hovrar igen och gör ett kraftigt klick """
+    pyautogui.moveTo(x + 50, y + 50, duration=0.3)  # Flytta bort musen
+    time.sleep(0.2)
+    pyautogui.moveTo(x, y, duration=0.3)  # Hovra tillbaka
+    time.sleep(0.2)
+
+    # Force-click med win32api
+    win32api.SetCursorPos((x, y))
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, x, y, 0, 0)
+    time.sleep(0.2)  # Håll nere klicket längre
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, x, y, 0, 0)
+
+
+def find_and_click_item(item_image_path, force_hover=False):
     screenshot = pyautogui.screenshot()
     screenshot.save("inventory_screenshot.png")
     inventory_img = cv2.imread("inventory_screenshot.png", cv2.IMREAD_UNCHANGED)
     template = cv2.imread(item_image_path, cv2.IMREAD_UNCHANGED)
     result = cv2.matchTemplate(inventory_img, template, cv2.TM_CCOEFF_NORMED)
     _, max_val, _, max_loc = cv2.minMaxLoc(result)
+    
     if max_val > 0.7:
         x, y = max_loc
-        smooth_click(x + template.shape[1] // 2, y + template.shape[0] // 2)
+        x_click = x + template.shape[1] // 2
+        y_click = y + template.shape[0] // 2
+        
+        if force_hover:
+            force_hover_and_click(x_click, y_click)  # 🔹 Endast om force_hover=True (dvs. för bag)
+        else:
+            smooth_click(x_click, y_click)  # 🔹 Vanlig smooth click för alla andra
+
         return True
-    print("❌ Item hittades inte, pausar skriptet.")
+    
+    print(f"❌ Item {item_image_path} hittades inte, pausar skriptet.")
     toggle_pause()
     return False
+
 
 def find_and_click_offset_item(item_image_path, retries=3):
     if paused:
@@ -170,7 +192,7 @@ if __name__ == "__main__":
         print(f"🔄 Iteration: {iteration_count + 1}")
 
         # ✅ **Steg 1: Klicka på bag**
-        bag_clicked = find_and_click_item("laptopbag.png")
+        bag_clicked = find_and_click_item("laptopbag.png", force_hover=True)
         if not bag_clicked:
             print("⚠️ Bag hittades inte, hoppar över iterationen.")
             continue  # 🔄 Hoppa över resten av iterationen och börja om från början
