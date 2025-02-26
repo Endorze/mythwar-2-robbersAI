@@ -245,9 +245,4 @@ if __name__ == "__main__":
             press_physical_pause_key()
 
             iteration_count = 0  # Återställ räknaren efter 23 lyckade iterationer
-            time.sleep(1)
-            bag_visible = find_and_click_item("laptopbag.png", force_hover=True)
-            if not bag_visible:
-            print("⚠️ Bag är inte synlig efter 23 iterationer. Väntar...")
-            time.sleep(5)  # 🔹 NYTT: Ge spelet extra tid om bag inte syns
-            continue  # 🔄 Hoppa över iterationen och börja om från början
+            time.sleep(3)
