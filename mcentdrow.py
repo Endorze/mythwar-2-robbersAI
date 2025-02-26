@@ -38,6 +38,8 @@ def smooth_click(x, y):
     pyautogui.moveTo(x, y, duration=0.3)
     time.sleep(0.1)
     pyautogui.click()
+    pyautogui.click()
+
 
 def capture_game_screen():
     game_window = get_game_window()
@@ -78,7 +80,7 @@ def find_and_click_item(item_image_path):
     template = cv2.imread(item_image_path, cv2.IMREAD_UNCHANGED)
     result = cv2.matchTemplate(inventory_img, template, cv2.TM_CCOEFF_NORMED)
     _, max_val, _, max_loc = cv2.minMaxLoc(result)
-    if max_val > 0.8:
+    if max_val > 0.7:
         x, y = max_loc
         smooth_click(x + template.shape[1] // 2, y + template.shape[0] // 2)
         return True
@@ -96,7 +98,7 @@ def find_and_click_offset_item(item_image_path, retries=3):
         template = cv2.imread(item_image_path, cv2.IMREAD_UNCHANGED)
         result = cv2.matchTemplate(inventory_img, template, cv2.TM_CCOEFF_NORMED)
         _, max_val, _, max_loc = cv2.minMaxLoc(result)
-        if max_val > 0.8:
+        if max_val > 0.7:
             x, y = max_loc
             x_offset = x + template.shape[1] + 30
             y_offset = y + template.shape[0] // 2
@@ -131,15 +133,16 @@ def type_23():
 
 if __name__ == "__main__":
     iteration_count = 0
+    time.sleep(3)
     while True:  # Kör loopen 20 gånger
         iteration_count += 1
-        find_and_click_item("bag.png")  # Steg 1: Klicka på bag
+        find_and_click_item("laptopbag.png")  # Steg 1: Klicka på bag
         time.sleep(0.5)
         screenshot, game_position = capture_game_screen()
         if screenshot is not None and detect_drowcrusher_text(screenshot, game_position):  # Endast fortsätt om Drowcrusher hittas
             pyautogui.moveTo(game_position[0] + int(game_position[2] * 0.8), game_position[1] + int(game_position[3] * 0.2))  # Hovrar vid 80% från vänster, 20% från toppen
             time.sleep(1)
-            find_and_click_item("centboots.png")  # Steg 3: Klicka på item i inventory
+            find_and_click_item("cent.png")  # Steg 3: Klicka på item i inventory
             time.sleep(1)
             click_at_percentage(0.75, 0.765)  # Steg 4: Klicka 70% från vänster, 70% ned
             time.sleep(0.5)
@@ -149,7 +152,7 @@ if __name__ == "__main__":
         if iteration_count % 23 == 0:
             press_physical_pause_key()
             time.sleep(1)
-            find_and_click_item("centboots.png")  # Steg 3: Klicka på item i inventory
+            find_and_click_item("cent.png")  # Steg 3: Klicka på item i inventory
             time.sleep(2)
             find_and_click_offset_item("quantity.png", retries=10)
             time.sleep(2)
