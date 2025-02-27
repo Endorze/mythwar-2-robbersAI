@@ -157,37 +157,6 @@ def type_23():
     time.sleep(2)
     keyboard.write("23")
 
-# if __name__ == "__main__":
-#     iteration_count = 0
-#     time.sleep(3)
-#     while True:  # Kör loopen 20 gånger
-#         find_and_click_item("laptopbag.png")  # Steg 1: Klicka på bag
-#         time.sleep(0.5)
-#         screenshot, game_position = capture_game_screen()
-#         if screenshot is not None and detect_drowcrusher_text(screenshot, game_position):  # Endast fortsätt om Drowcrusher hittas
-#             pyautogui.moveTo(game_position[0] + int(game_position[2] * 0.8), game_position[1] + int(game_position[3] * 0.2))  # Hovrar vid 80% från vänster, 20% från toppen
-#             time.sleep(1)
-#             find_and_click_item("cent.png")  # Steg 3: Klicka på item i inventory
-#             time.sleep(1)
-#             click_at_percentage(0.75, 0.765)  # Steg 4: Klicka 70% från vänster, 70% ned
-#             time.sleep(0.5)
-#             click_at_percentage(0.5, 0.5)  # Klicka i mitten av skärmen
-#             time.sleep(8)
-#             click_at_percentage(0.5, 0.5)
-#             iteration_count += 1 
-#         if iteration_count % 23 == 0:
-#             press_physical_pause_key()
-#             time.sleep(1)
-#             find_and_click_item("cent.png")  # Steg 3: Klicka på item i inventory
-#             time.sleep(2)
-#             find_and_click_offset_item("quantity.png", retries=10)
-#             time.sleep(2)
-#             type_23()
-#             time.sleep(2)
-#             find_and_click_item("continue.png")
-#             press_physical_pause_key()
-#             iteration_count = 0
-#                 # time.sleep(1)  # Valfri paus mellan iterationer för att undvika överbelastning
 if __name__ == "__main__":
     iteration_count = 0
     time.sleep(3)
