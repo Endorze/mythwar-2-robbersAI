@@ -32,6 +32,9 @@ def press_alt_g():
     keyboard.press('alt+g')
     time.sleep(0.5)
 
+def release_alt_g():
+    keyboard.release('alt+g')
+
 def get_game_window():
     for window in gw.getWindowsWithTitle("[mountasi1] Myth War II Online( ENGLISH version 1.0.3 - 6137 )"):
         if window.isActive:
@@ -208,8 +211,10 @@ if __name__ == "__main__":
 
         # ✅ **Efter 23 lyckade iterationer, kör extrasteg**
         if iteration_count % 23 == 0:
+            time.sleep(0.5)
+            release_alt_g()
             print("🎉 23 lyckade iterationer! Kör extrastegen.")
-            sleep(1)
+            time.sleep(1)
             press_physical_pause_key()
             time.sleep(1)
 
