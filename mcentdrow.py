@@ -28,6 +28,10 @@ def terminate_script():
 
 keyboard.add_hotkey("f5", terminate_script)
 
+def press_alt_g():
+    keyboard.press_and_release('alt+g')
+    time.sleep(0.5)
+
 def get_game_window():
     for window in gw.getWindowsWithTitle("[mountasi1] Myth War II Online( ENGLISH version 1.0.3 - 6137 )"):
         if window.isActive:
@@ -191,12 +195,8 @@ if __name__ == "__main__":
     while True:  # Oändlig loop
         print(f"🔄 Iteration: {iteration_count + 1}")
 
-        # ✅ **Steg 1: Klicka på bag**
-        bag_clicked = find_and_click_item("laptopbag.png", force_hover=True)
-        if not bag_clicked:
-            print("⚠️ Bag hittades inte, hoppar över iterationen.")
-            continue  # 🔄 Hoppa över resten av iterationen och börja om från början
-
+        # ✅ **Steg 1: Klicka på bag** 
+        press_alt_g()
         time.sleep(0.5)
 
         # ✅ **Steg 2: Ta en skärmdump och leta efter Drowcrusher**
