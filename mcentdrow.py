@@ -62,18 +62,30 @@ def detect_drowcrusher_text(image, game_position):
     result = cv2.bitwise_and(image, image, mask=mask_yellow)
     result = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
     result = cv2.bitwise_not(result)
+    
+    # OCR-konfiguration
     data = pytesseract.image_to_data(result, config="--oem 3 --psm 6", output_type=pytesseract.Output.DICT)
+    
+    # Lista med möjliga feltolkningar av "Drowcrusher"
+    possible_variants = [
+        "drowcrusher", "+drowcrusher+", "drowcrusber", "drowcrush3r", "drowcrushe", "drowcrusl1er", "drowcrushr", "drowcruhser"
+    ]
+    
     for i in range(len(data["text"])):
         text = data["text"][i].lower().strip()
-        if "drowcrusher" in text:
+        
+        # Kontrollera om texten matchar någon av variationerna
+        if any(variant in text for variant in possible_variants):
             x, y, w, h = data["left"][i], data["top"][i], data["width"][i], data["height"][i]
             click_x = game_position[0] + x + w // 2
             click_y = game_position[1] + y + h + 70
             print(f"✅ Klickar på '{text}' vid ({click_x}, {click_y})")
             smooth_click(click_x, click_y)
             return True
+    
     print("❌ OCR hittade ingen 'Drowcrusher'-text eller den försvann.")
     return False
+
 
 def force_hover_and_click(x, y):
     """ Flyttar bort musen, hovrar igen och gör ett kraftigt klick """
