@@ -29,7 +29,7 @@ def terminate_script():
 keyboard.add_hotkey("f5", terminate_script)
 
 def press_alt_g():
-    keyboard.press_and_release('alt+g')
+    keyboard.press('alt+g')
     time.sleep(0.5)
 
 def get_game_window():
@@ -56,13 +56,12 @@ def capture_game_screen():
 
 def detect_drowcrusher_text(image, game_position):
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    lower_yellow = np.array([28, 250, 200])  # Justerad för F8FC00
-    upper_yellow = np.array([32, 255, 255])
+    lower_yellow = np.array([20, 150, 150])
+    upper_yellow = np.array([35, 255, 255])
     mask_yellow = cv2.inRange(hsv, lower_yellow, upper_yellow)
     result = cv2.bitwise_and(image, image, mask=mask_yellow)
     result = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
-    result = cv2.GaussianBlur(result, (3, 3), 0)  # Minskad brusnivå
-    result = cv2.adaptiveThreshold(result, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
+    result = cv2.bitwise_not(result)
     data = pytesseract.image_to_data(result, config="--oem 3 --psm 6", output_type=pytesseract.Output.DICT)
     for i in range(len(data["text"])):
         text = data["text"][i].lower().strip()
