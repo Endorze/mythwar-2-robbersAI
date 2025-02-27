@@ -197,7 +197,7 @@ if __name__ == "__main__":
         # ✅ **Efter 23 lyckade iterationer, kör extrasteg**
         if iteration_count % 23 == 0:
             print("🎉 23 lyckade iterationer! Kör extrastegen.")
-
+            sleep(1)
             press_physical_pause_key()
             time.sleep(1)
 
