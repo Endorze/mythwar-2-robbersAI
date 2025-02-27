@@ -245,4 +245,4 @@ if __name__ == "__main__":
             press_physical_pause_key()
 
             iteration_count = 0  # Återställ räknaren efter 23 lyckade iterationer
-            time.sleep(3)
+            time.sleep(2)
