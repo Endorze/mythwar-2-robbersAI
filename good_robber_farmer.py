@@ -26,7 +26,7 @@ keyboard.add_hotkey("f5", toggle_pause)
 
 def get_game_window():
     """ Hitta spelrutans position och storlek på skärmen. """
-    for window in gw.getWindowsWithTitle("[mountasi2] Myth War II Online( ENGLISH version 1.0.3 - 6137 )"):  
+    for window in gw.getWindowsWithTitle("[mountasi] Myth War II Online( ENGLISH version 1.0.3 - 6137 )"):  
         if window.isActive:
             return window.left, window.top, window.width, window.height
     return None
